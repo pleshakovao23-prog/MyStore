@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Storefront — Product Showcase</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Wildberries-like theme: tuned purple, clean cards, bold prices, plus cart drawer */
+    :root{
+      --wb-purple:#6126ff; /* tuned brand color (you can change this to your exact HEX) */
+      --wb-purple-dark:#4a1bd6;
+      --accent-gradient: linear-gradient(90deg,var(--wb-purple),var(--wb-purple-dark));
+      --bg:#f6f5fb;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --radius:12px;
+      --shadow:0 10px 30px rgba(16,24,40,0.08);
+      font-family: 'Inter', system-ui, -apple-system, Roboto, 'Segoe UI', Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{background:linear-gradient(180deg,var(--bg),#ffffff);color:#0f1720}
+    .wrap{max-width:1200px;margin:20px auto;padding:18px}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:10px;background:var(--wb-purple);display:grid;place-items:center;color:white;font-weight:800}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:4px 0 0;color:var(--muted);font-size:13px}
+
+    /* search + filters row */
+    .actions{display:flex;gap:12px;align-items:center}
+    .search{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:white;box-shadow:var(--shadow)}
+    .search input{border:0;outline:none;font-size:14px}
+    .filters button{background:transparent;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--muted)}
+
+    /* products grid */
+    .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:18px}
+    .card{background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;transition:transform .18s ease,box-shadow .18s ease}
+    .card:hover{transform:translateY(-6px);box-shadow:0 18px 40px rgba(16,24,40,0.12)}
+
+    .thumb{height:220px;background:#fafafa;display:grid;place-items:center;padding:12px}
+    .thumb img{max-width:100%;max-height:100%;object-fit:contain}
+
+    .body{padding:12px;display:flex;flex-direction:column;gap:8px}
+    .title{font-weight:700;font-size:15px;margin:0}
+    .desc{color:var(--muted);font-size:13px;margin:0}
+
+    .meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .price{font-weight:900;color:var(--wb-purple);font-size:16px}
+    .old-price{font-size:13px;color:var(--muted);text-decoration:line-through;margin-right:8px}
+
+    .card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+    .btn{background:var(--wb-purple);color:white;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:700}
+    .btn-outline{background:transparent;border:1px solid rgba(11,18,32,0.06);color:var(--wb-purple);padding:8px 10px;border-radius:10px;cursor:pointer}
+
+    .tag-row{display:flex;gap:8px;margin-top:6px}
+    .tag{background:#f3efff;color:var(--wb-purple);padding:6px 8px;border-radius:999px;font-weight:700;font-size:12px}
+
+    /* modal mimics WB product view: left - carousel, right - info */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
+    .modal{width:100%;max-width:1100px;background:white;border-radius:12px;overflow:hidden;display:grid;grid-template-columns:1fr 420px}
+    .modal-left{padding:18px}
+    .carousel{border-radius:8px;overflow:hidden;background:#fafafa}
+    .carousel img{width:100%;height:500px;object-fit:contain;display:block;background:white}
+    .thumbnails{display:flex;gap:8px;margin-top:12px}
+    .thumbnails img{width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent}
+    .thumbnails img.active{border-color:var(--wb-purple)}
+
+    .modal-right{padding:18px}
+    .modal-right h2{margin:0;font-size:20px}
+    .modal-right .price{font-size:22px;color:var(--wb-purple);font-weight:900;margin-top:8px}
+    .modal-right .meta-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .modal-right .buy-row{display:flex;gap:10px;margin-top:18px}
+    .note{font-size:13px;color:var(--muted);margin-top:12px}
+
+    .close-btn{position:absolute;top:14px;right:14px;background:white;border-radius:999px;padding:8px;border:0;cursor:pointer}
+
+    /* Cart drawer */
+    .cart-toggle{position:relative}
+    .cart-bubble{position:absolute;top:-8px;right:-8px;background:var(--wb-purple);color:white;border-radius:999px;padding:4px 7px;font-weight:800;font-size:12px}
+    .cart-drawer{position:fixed;right:0;top:0;height:100vh;width:360px;background:white;box-shadow: -24px 0 40px rgba(16,24,40,0.12);transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.9,.3,1);z-index:1100;padding:18px;display:flex;flex-direction:column;gap:12px}
+    .cart-drawer.open{transform:translateX(0)}
+    .cart-item{display:flex;gap:12px;align-items:center;border-radius:8px;padding:8px;background:#fbfbff}
+    .cart-item img{width:64px;height:64px;object-fit:cover;border-radius:6px}
+    .cart-footer{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+
+    @media (max-width:980px){
+      .modal{grid-template-columns:1fr}
+      .carousel img{height:320px}
+      .cart-drawer{width:100%;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">PR</div>
+        <div>
+          <h1>Products — Storefront</h1>
+          <p class="lead">Purple, clean marketplace look. Cart added.</p>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="search" role="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke="#9CA3AF" stroke-width="1.5"/></svg>
+          <input placeholder="Search products" aria-label="Search">
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="filters">
+            <button>Category</button>
+            <button>Price</button>
+            <button>Sort</button>
+          </div>
+
+          <!-- CART TOGGLE -->
+          <div class="cart-toggle">
+            <button id="openCartBtn" class="btn-outline" aria-label="Open cart">Cart</button>
+            <div id="cartCount" class="cart-bubble" style="display:none">0</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="products" id="products">
+      <!-- JS will render cards here -->
+    </section>
+
+    <!-- Cart drawer -->
+    <aside class="cart-drawer" id="cartDrawer" aria-hidden="true">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Your cart</h3>
+        <button id="closeCartBtn" class="btn-outline">Close</button>
+      </div>
+      <div id="cartList" style="display:flex;flex-direction:column;gap:10px;overflow:auto;padding-right:6px"></div>
+      <div class="cart-footer">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:800">Total</div>
+          <div id="cartTotal" style="font-weight:900">0 ₽</div>
+        </div>
+        <button id="checkoutBtn" class="btn">Checkout</button>
+        <button id="clearCart" class="btn-outline">Clear cart</button>
+        <div style="font-size:13px;color:var(--muted)">Links go to your checkout / payment handler — replace in JS.</div>
+      </div>
+    </aside>
+
+    <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button class="close-btn" id="closeModal" aria-label="Close">✕</button>
+        <div class="modal-left">
+          <div class="carousel" id="carousel"><img id="carouselImage" src="" alt=""></div>
+          <div class="thumbnails" id="thumbnails"></div>
+        </div>
+        <div class="modal-right">
+          <h2 id="modalTitle">Product title</h2>
+          <div class="price" id="modalPrice">0 ₽</div>
+          <div class="meta-row">
+            <div class="tag">Free delivery</div>
+            <div class="tag">In stock</div>
+          </div>
+          <p id="modalDesc" class="note">Full product description goes here. Replace with your long description in the product data.</p>
+          <div class="buy-row">
+            <button class="btn" id="addToCartModal">Add to cart</button>
+            <button class="btn-outline" id="toFavorite">❤ Favorite</button>
+          </div>
+          <div id="modalExtras" class="note"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======== Product data (customize here) ========
+    const products = [
+  {
+    id: 1,
+    title: "Worksheet Daily Routines",
+    short: "Daily actions practice",
+    long: "A fun worksheet for practicing everyday routines with vocabulary and sentences.",
+    price: 250,
+    priceText: '250 ₽',
+    images: ["https://avatars.mds.yandex.net/i?id=ec8dd59d658eaf5c324833e60584dbeb_l-8186552-images-thumbs&n=13", "https://i.postimg.cc/XYxkTVm9/daily-routines-2.jpg"]
+  },
+  {
+    id: 2,
+    title: "Worksheet Idioms",
+    short: "Popular English idioms",
+    long: "Engaging idioms worksheet with meaning matching and sentence examples.",
+    price: 300,
+    priceText: '300 ₽',
+    images: ["https://sun9-5.userapi.com/impg/wG8ipUoqrnS0Ca0TuQsspgnncSIaAYCYMxERrQ/FSmcxq7ShEc.jpg?size=604x340&quality=95&sign=7ccffb22e59630986463a42e6e09e209&type=album", "https://i.postimg.cc/52p49rXf/idioms-2.jpg"]
+  },
+  {
+    id: 3,
+    title: "Worksheet Action Verbs",
+    short: "Verbs for primary learners",
+    long: "Action verbs exercises including pictures and sentence building.",
+    price: 200,
+    priceText: '200 ₽',
+    images: ["https://avatars.mds.yandex.net/i?id=00a71b147e2b91e06c83795e6172abfd_l-5350148-images-thumbs&n=13", "https://i.postimg.cc/d0J8V9W9/action-verbs-2.jpg"]
+  },
+  {
+    id: 4,
+    title: "Worksheet Phrasal Verbs",
+    short: "Phrasal verbs made easy",
+    long: "Great practice for common phrasal verbs with visuals and tasks.",
+    price: 350,
+    priceText: '350 ₽',
+    images: ["https://avatars.mds.yandex.net/i?id=c272b943eea3325e4cdc76b7f235e4e4_l-5083805-images-thumbs&n=13", "https://i.postimg.cc/bJHtKjbQ/phrasal-verbs-2.jpg"]
+  },
+  {
+    id: 5,
+    title: "Worksheet Past Simple",
+    short: "Past tense exercises",
+    long: "Helpful worksheet for practicing Past Simple with regular and irregular verbs.",
+    price: 250,
+    priceText: '250 ₽',
+    images: ["https://avatars.mds.yandex.net/i?id=065bdd0bd360ef509994a5897e92157cf5479718-5287068-images-thumbs&n=13", "https://i.postimg.cc/3RWCgWVc/past-simple-2.jpg"]
+  },
+  {
+    id: 6,
+    title: "Worksheet Weather & Seasons",
+    short: "Weather vocabulary",
+    long: "Colorful worksheet for weather expressions and seasons, great for beginners.",
+    price: 200,
+    priceText: '200 ₽',
+    images: ["https://avatars.mds.yandex.net/i?id=500fb5e75813407bcc436a2f2fb3f49d61afb72a-5850174-images-thumbs&n=13", "https://i.postimg.cc/kMNfyzTz/weather-2.jpg"]
+  }
+];
+
+    // ======== Simple cart implementation (in-memory) ========
+    const cart = { items: [] };
+
+    function addToCart(productId, qty = 1){
+      const prod = products.find(p=>p.id==productId);
+      if(!prod) return;
+      const existing = cart.items.find(i=>i.id==productId);
+      if(existing){ existing.qty += qty; }
+      else { cart.items.push({ id: prod.id, title: prod.title, price: prod.price, priceText: prod.priceText || (prod.price + ' ₽'), img: prod.images[0] || '', qty }); }
+      renderCart();
+      openCart();
+    }
+
+    function removeFromCart(productId){
+      cart.items = cart.items.filter(i=>i.id!==productId);
+      renderCart();
+    }
+
+    function updateQty(productId, newQty){
+      const it = cart.items.find(i=>i.id===productId); if(!it) return; it.qty = Math.max(1, newQty); renderCart(); }
+
+    function cartTotal(){
+      return cart.items.reduce((s,i)=>s + (i.price * i.qty), 0);
+    }
+
+    function formatTotal(n){ return n.toLocaleString('ru-RU') + ' ₽'; }
+
+    // ======== Render products (cards) ========
+    const productsRoot = document.getElementById('products');
+    function renderProducts(){
+      productsRoot.innerHTML='';
+      products.forEach(p=>{
+        const el = document.createElement('article');
+        el.className='card';
+        el.innerHTML = `
+          <div class="thumb"><img src="${p.images[0]||''}" alt="${escapeHtml(p.title)}"></div>
+          <div class="body">
+            <h3 class="title">${escapeHtml(p.title)}</h3>
+            <p class="desc">${escapeHtml(p.short)}</p>
+            <div class="tag-row"><div class="tag">Digital</div><div class="tag">Instant</div></div>
+            <div class="card-footer">
+              <div><span class="price">${escapeHtml(p.priceText || (p.price + ' ₽'))}</span></div>
+              <div style="display:flex;gap:8px"><button class="btn" data-product-id="${p.id}">View</button><button class="btn-outline" data-buy-id="${p.id}" aria-label="add to cart">Buy</button></div>
+            </div>
+          </div>
+        `;
+        productsRoot.appendChild(el);
+      });
+
+      // button handlers
+      document.querySelectorAll('.btn[data-product-id]').forEach(btn=>btn.addEventListener('click',()=>openModalForProduct(btn.dataset.productId)));
+      document.querySelectorAll('.btn-outline[data-buy-id]').forEach(btn=>btn.addEventListener('click',()=>openModalForProduct(btn.dataset.buyId)));
+    }
+
+    // ======== Modal/carousel logic ========
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const carouselImage = document.getElementById('carouselImage');
+    const thumbnails = document.getElementById('thumbnails');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalPrice = document.getElementById('modalPrice');
+    const modalDesc = document.getElementById('modalDesc');
+    const modalExtras = document.getElementById('modalExtras');
+    const addToCartModal = document.getElementById('addToCartModal');
+    const closeModal = document.getElementById('closeModal');
+
+    let currentProduct = null; let currentImageIndex = 0;
+    function openModalForProduct(id){
+      const prod = products.find(x=>x.id==id); if(!prod) return;
+      currentProduct = prod; currentImageIndex=0;
+      modalTitle.textContent = prod.title; modalPrice.textContent = prod.priceText || (prod.price + ' ₽'); modalDesc.textContent = prod.long; modalExtras.textContent = prod.extras||'';
+      renderCarousel(prod.images||[]);
+      addToCartModal.onclick = ()=>{ addToCart(prod.id,1); };
+      modalBackdrop.style.display='flex'; document.body.style.overflow='hidden';
+    }
+    function closeModalFn(){ modalBackdrop.style.display='none'; document.body.style.overflow=''; }
+    function renderCarousel(images){ thumbnails.innerHTML=''; if(!images.length){ carouselImage.src=''; return;} carouselImage.src=images[0]; images.forEach((s,i)=>{ const im=document.createElement('img'); im.src=s; im.className=(i===0?'active':''); im.addEventListener('click',()=>{ carouselImage.src=s; document.querySelectorAll('#thumbnails img').forEach((el,idx)=>el.classList.toggle('active',idx===i)); }); thumbnails.appendChild(im); }); }
+
+    closeModal.addEventListener('click',closeModalFn); modalBackdrop.addEventListener('click',e=>{ if(e.target===modalBackdrop) closeModalFn(); });
+    document.addEventListener('keydown',e=>{ if(modalBackdrop.style.display==='flex'){ if(e.key==='Escape') closeModalFn(); } });
+
+    // ======== Cart UI ========
+    const cartDrawer = document.getElementById('cartDrawer');
+    const openCartBtn = document.getElementById('openCartBtn');
+    const closeCartBtn = document.getElementById('closeCartBtn');
+    const cartList = document.getElementById('cartList');
+    const cartTotalEl = document.getElementById('cartTotal');
+    const cartCount = document.getElementById('cartCount');
+    const clearCartBtn = document.getElementById('clearCart');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+
+    function renderCart(){
+      cartList.innerHTML='';
+      if(cart.items.length===0){ cartList.innerHTML = '<div style="color:var(--muted)">Your cart is empty</div>'; cartCount.style.display='none'; }
+      else{
+        cart.items.forEach(it=>{
+          const el = document.createElement('div'); el.className='cart-item';
+          el.innerHTML = `
+            <img src="${it.img}" alt="${escapeHtml(it.title)}">
+            <div style="flex:1">
+              <div style="font-weight:800">${escapeHtml(it.title)}</div>
+              <div style="color:var(--muted);font-size:13px">${escapeHtml(it.priceText || (it.price + ' ₽'))} × <input type="number" min="1" value="${it.qty}" data-qty-id="${it.id}" style="width:58px;border-radius:6px;border:1px solid #eee;padding:6px;margin-left:8px"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+              <div style="font-weight:900">${(it.price * it.qty).toLocaleString('ru-RU')} ₽</div>
+              <button class="btn-outline" data-remove-id="${it.id}">Remove</button>
+            </div>
+          `;
+          cartList.appendChild(el);
+        });
+        // add listeners for qty inputs and remove buttons
+        cartList.querySelectorAll('input[data-qty-id]').forEach(inp=>inp.addEventListener('change', (e)=>{ updateQty(inp.dataset.qtyId, parseInt(inp.value) || 1); }));
+        cartList.querySelectorAll('button[data-remove-id]').forEach(b=>b.addEventListener('click', ()=>removeFromCart(b.dataset.removeId)));
+        cartCount.style.display='block'; cartCount.textContent = cart.items.reduce((s,i)=>s+i.qty,0);
+      }
+      cartTotalEl.textContent = formatTotal(cartTotal());
+    }
+
+    function openCart(){ cartDrawer.classList.add('open'); cartDrawer.setAttribute('aria-hidden','false'); renderCart(); }
+    function closeCart(){ cartDrawer.classList.remove('open'); cartDrawer.setAttribute('aria-hidden','true'); }
+
+    openCartBtn.addEventListener('click', ()=>{ openCart(); });
+    closeCartBtn.addEventListener('click', ()=>{ closeCart(); });
+    clearCartBtn.addEventListener('click', ()=>{ cart.items = []; renderCart(); });
+    checkoutBtn.addEventListener('click', ()=>{
+      // replace this with your checkout integration
+      if(cart.items.length===0){ alert('Cart is empty'); return; }
+      alert('Proceed to checkout — replace this handler with your payment / order flow.');
+    });
+
+    // ======== Utilities ========
+    function removeFromCart(productId){ cart.items = cart.items.filter(i=>i.id!==productId); renderCart(); }
+    function updateQty(productId, newQty){ const it = cart.items.find(i=>i.id===productId); if(!it) return; it.qty = Math.max(1,newQty); renderCart(); }
+    function escapeHtml(t){ if(!t) return ''; return t.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[ch]); }
+
+    // init
+    renderProducts(); renderCart();
+
+    /*
+      NOTES / Where to customize:
+      - Change the brand color: update --wb-purple and --wb-purple-dark in :root to match your brand.
+      - Products: edit the `products` array at the top. Use `price` as a number (for calculations) and `priceText` for custom formatted price display.
+      - Buy buttons in product cards add items to the cart; modal "Add to cart" does the same.
+      - Checkout: replace checkoutBtn click handler with your real payment / order workflow (send cart to your server, open payment gateway, etc.).
+      - Persisting cart: this is in-memory only. To persist between reloads, store `cart` in localStorage and rehydrate on load.
+      - Links / images: replace image URLs with your own or local paths. If you use local files, use relative paths like '/images/product1.jpg'.
+    */
+  </script>
+</body>
+</html>
